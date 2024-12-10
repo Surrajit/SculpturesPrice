@@ -4,21 +4,25 @@ from shipment.configuration.mongo_operations import MongoDBOperation
 from shipment.logger import logging
 from shipment.entity.artifacts_entity import (
     DataIngestionArtifacts,
-    DataValidationArtifacts
+    DataValidationArtifacts,
+    DataTransformationArtifacts
         )
 
 from shipment.entity.config_entity import (
     DataIngestionConfig,
-    DataValidationConfig
+    DataValidationConfig,
+    DataTransformationConfig
     )
 
 from shipment.components.data_ingestion import DataIngestion
 from shipment.components.data_validation import DataValidation
+from shipment.components.data_transformation import DataTransformation
 
 class TrainPipeline:
     def __init__(self):
         self.data_ingestion_config = DataIngestionConfig()
         self.data_validation_config = DataValidationConfig()
+        self.data_transformation_config = DataTransformationConfig()
         self.mongo_op = MongoDBOperation()
 
  
@@ -59,6 +63,28 @@ class TrainPipeline:
             raise shippingException(e, sys) from e
 
 
+     # This method is used to start the data transformation
+    def start_data_transformation(
+        self, data_ingestion_artifact: DataIngestionArtifacts
+    ) -> DataTransformationArtifacts:
+        logging.info(
+            "Entered the start_data_transformation method of TrainPipeline class"
+        )
+        try:
+            data_transformation = DataTransformation(
+                data_ingestion_artifacts=data_ingestion_artifact,
+                data_transformation_config=self.data_transformation_config,
+            )
+            data_transformation_artifact = (
+                data_transformation.initiate_data_transformation()
+            )
+            logging.info(
+                "Exited the start_data_transformation method of TrainPipeline class"
+            )
+            return data_transformation_artifact
+
+        except Exception as e:
+            raise shippingException(e, sys) from e
 
 
 
@@ -73,7 +99,9 @@ class TrainPipeline:
             data_validation_artifact = self.start_data_validation(
                 data_ingestion_artifact=data_ingestion_artifact
             )
-
+            data_transformation_artifact = self.start_data_transformation(
+                data_ingestion_artifact=data_ingestion_artifact
+            )
             logging.info("Exited the run_pipeline method of TrainPipeline class")
 
         except Exception as e:
